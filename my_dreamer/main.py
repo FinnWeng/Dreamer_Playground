@@ -31,7 +31,7 @@ def define_config():
     config.task = "atari_Breakout"
     #   config.task = 'atari_SpaceInvaders'
     config.is_discrete = True
-    config.grayscale = True
+    config.grayscale = False
     config.envs = 1
     config.parallel = "none"
     config.action_repeat = 2

@@ -159,8 +159,8 @@ class Play:
             else:
 
                 processed_obs = utils.preprocess(
-                    {"obs": np.array([self.ob]), "rewards": 0}, self._c
-                )["obs"]
+                    {"obs": np.array([self.ob]),"obp1s": np.array([self.ob]) ,"rewards": 0}, self._c
+                )["obs"] # obp1s is for redundant here
 
                 act = self.model.policy(processed_obs, training=True)[
                     0

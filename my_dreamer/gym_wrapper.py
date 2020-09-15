@@ -52,6 +52,14 @@ class Gym_Wrapper:
             ob = self.crop_ob(ob)  # (160, 160, 1)
             ob = cv2.resize(ob, self.resize_size)  # (84, 84)
             ob = np.expand_dims(ob, axis=-1)  # (84, 84, 1)
+        else:
+            # self._env.ale.getScreenGrayscale(self._buffers[0])
+            self._env.ale.getScreenRGB2(self._buffers[0])
+            # ob = ob[:, :, :1]
+            ob = self._buffers[0]
+            ob = ob[:, :, None] if self._grayscale else ob
+            ob = self.crop_ob(ob)  # (160, 160, 1)
+            ob = cv2.resize(ob, self.resize_size)  # (84, 84)
 
         return ob, reward, done, _
 
@@ -85,4 +93,3 @@ if __name__ == "__main__":
         print("info:", info)
         print("ob:", ob.shape)
         cv2.imwrite("./train_gen_img/test_{}.jpg".format(i), ob)
-

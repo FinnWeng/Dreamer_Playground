@@ -94,6 +94,7 @@ class ConvEncoder(tf.keras.Model):
         x = self.l1(x)  # (1, 31, 31, 32)
 
         x = self.l2(x)  # (1, 14, 14, 64)
+
         x = self.l3(x)  # (1, 6, 6, 128)
         x = self.l4(x)  # (1, 2, 2, 256)
         # x = self.l5(x)
@@ -369,7 +370,7 @@ class Dreamer:
         # define callback and set networ parameters
         gpus = tf.config.experimental.list_physical_devices("GPU")
 
-        tf.config.experimental.set_visible_devices(gpus[1], "GPU")
+        tf.config.experimental.set_visible_devices(gpus[0], "GPU")
         if gpus:
             # Currently, memory growth needs to be the same across GPUs
             for gpu in gpus:
@@ -661,7 +662,8 @@ class Dreamer:
 
         4. in each batch process, after imagine step, do update actor and critic
         """
-        obp1s = tf.cast(obp1s, tf.float32)
+        obs = tf.cast(obs, tf.float32) # after preprocess
+        obp1s = tf.cast(obp1s, tf.float32) # after preprocess
         actions = tf.cast(acts, tf.float32)
         rewards = tf.cast(rewards, tf.float32)
         record_discounts = tf.cast(record_discounts, tf.float32)
@@ -774,7 +776,7 @@ class Dreamer:
         tf.summary.experimental.set_step(self.total_step)
         print("update finish, save summary...")
         with self._writer.as_default():
-            tf.summary.scalar("actor_loss", actor_loss, step=self.total_step)
+            tf.summary.scalar("actor_loss/reverse_lambda_return", actor_loss, step=self.total_step)
             tf.summary.scalar("critic1_loss", critic_loss, step=self.total_step)
             tf.summary.scalar("world_loss", world_loss, step=self.total_step)
             # tf.summary.scalar(
@@ -784,14 +786,16 @@ class Dreamer:
         if self.total_step % 500 == 0:
             print("do image summaries saving!!")
             self._image_summaries(
-                {"obs": obs, "actions": actions},
+                {"obs": obs, "actions": actions,"obp1s":obp1s},
                 embed,
                 image_pred,
             )
 
     def _image_summaries(self, data, embed, image_pred):
         # print("data['obs']:", data["obs"].shape) #  (50, 10, 64, 64, 1)
-        truth = data["obs"][:6] + 0.5
+
+
+        truth = data["obsp1s"][:6] + 0.5
         recon = image_pred.mode()[:6]
         init, _ = self.dynamics.observe(
             embed[:6, :5], data["actions"][:6, :5]
