@@ -38,10 +38,15 @@ class Play:
         # self._dataset = iter(self.load_dataset(self.datadir, self._c))
         self.prefill_and_make_dataset()
 
+    # def prefill_and_make_dataset(self):
+    #     # since it casuse error when random choice zero object in self.load_dataset
+    #     self.collect(using_random_policy=False, must_be_whole_episode=True)
+    #     self._dataset = iter(utils.load_dataset(self.datadir, self._c))
+
     def prefill_and_make_dataset(self):
         # since it casuse error when random choice zero object in self.load_dataset
         self.collect(using_random_policy=False, must_be_whole_episode=True)
-        self._dataset = iter(utils.load_dataset(self.datadir, self._c))
+        self._dataset = utils.slices_dataset_generator(self.datadir, self._c)
 
     def act_repeat(self, env, act):
         collect_reward = 0
@@ -159,8 +164,15 @@ class Play:
             else:
 
                 processed_obs = utils.preprocess(
-                    {"obs": np.array([self.ob]),"obp1s": np.array([self.ob]) ,"rewards": 0}, self._c
-                )["obs"] # obp1s is for redundant here
+                    {
+                        "obs": np.array([self.ob]),
+                        "obp1s": np.array([self.ob]),
+                        "rewards": 0,
+                    },
+                    self._c,
+                )[
+                    "obs"
+                ]  # obp1s is for redundant here
 
                 act = self.model.policy(processed_obs, training=True)[
                     0
@@ -217,10 +229,10 @@ class Play:
 
             # for first 100 batch, play just 500 step
 
-            if self.total_step < 50000:
-                if self.total_step % 500 == 0:
-                    print("pre-set!")
-                    done = True
+            # if self.total_step < 50000:
+            if self.total_step % self._c.time_limit == 0:
+                print("pre-set!")
+                done = True
 
             if done:
                 print("game done!!")
@@ -297,12 +309,13 @@ class Play:
 
             # reset the inner buffer
             utils.save_episode(self.datadir, dict_of_episode_record)
-            with self.model._writer.as_default():
-                tf.summary.scalar(
-                    "episode_reward",
-                    tf.reduce_sum(tuple_of_episode_columns[3]),
-                    step=self.model.total_step,
-                )
+            # if self.model.total_step % 20:
+            #     with self.model._writer.as_default():
+            #         tf.summary.scalar(
+            #             "episode_reward",
+            #             tf.reduce_sum(tuple_of_episode_columns[3]),
+            #             step=self.model.total_step,
+            #         )
 
             self.post_process_play_records()
         else:
@@ -311,57 +324,57 @@ class Play:
     def post_process_play_records(self):
         self.play_records = []
 
-    def update(self):
-        # this is single thread playing and processing
-        # TODO: multi thread playing and processing
-        data = next(self._dataset)
+    # def update(self):
+    #     # this is single thread playing and processing
+    #     # TODO: multi thread playing and processing
+    #     data = next(self._dataset)
 
-        # len(self.play_records) batch*batch_length*TD_size
-        for i in range(
-            (len(self.play_records) // self.batch_size) + 1
-        ):  # +1 for take the last step of play
-            print("updata_i:", i)
-            batch_data = self.play_records[
-                i * self.batch_size : (i + 1) * self.batch_size
-            ]
+    #     # len(self.play_records) batch*batch_length*TD_size
+    #     for i in range(
+    #         (len(self.play_records) // self.batch_size) + 1
+    #     ):  # +1 for take the last step of play
+    #         print("updata_i:", i)
+    #         batch_data = self.play_records[
+    #             i * self.batch_size : (i + 1) * self.batch_size
+    #         ]
 
-            if (
-                len(batch_data) != self.batch_size
-            ):  # to deal with +1 causing not enough data of a batch size
-                batch_data = self.play_records[-self.batch_size :]
-                print("reversely take batch data")
-            # print("batch_data:", len(batch_data))
+    #         if (
+    #             len(batch_data) != self.batch_size
+    #         ):  # to deal with +1 causing not enough data of a batch size
+    #             batch_data = self.play_records[-self.batch_size :]
+    #             print("reversely take batch data")
+    #         # print("batch_data:", len(batch_data))
 
-            if self.advantage:
-                # obs, obp1s, rewards, dones = self.TD_dict_to_TD_train_data(
-                #     batch_data, advantage=self.advantage
-                # )  # (batch_size, 57), (batch_size,)
-                data = utils.preprocess(data, self._c)
-                obs, obp1s, rewards, dones = (
-                    data["obs"],
-                    data["obp1s"],
-                    data["rewards"],
-                    data["dones"],
-                )
+    #         if self.advantage:
+    #             # obs, obp1s, rewards, dones = self.TD_dict_to_TD_train_data(
+    #             #     batch_data, advantage=self.advantage
+    #             # )  # (batch_size, 57), (batch_size,)
+    #             data = utils.preprocess(data, self._c)
+    #             obs, obp1s, rewards, dones = (
+    #                 data["obs"],
+    #                 data["obp1s"],
+    #                 data["rewards"],
+    #                 data["dones"],
+    #             )
 
-                start_time = time.time()
-                # rewards_mean = self.model.update_advantage(obs, obp1s, rewards, dones)
-                rewards_mean = self.model.update_dreaming(obs, obp1s, rewards, dones)
-                end_time = time.time()
-                print("update time = ", end_time - start_time)
+    #             start_time = time.time()
+    #             # rewards_mean = self.model.update_advantage(obs, obp1s, rewards, dones)
+    #             rewards_mean = self.model.update_dreaming(obs, obp1s, rewards, dones)
+    #             end_time = time.time()
+    #             print("update time = ", end_time - start_time)
 
-            else:
-                obs, actions, rewards, dones, discounts = self.TD_dict_to_TD_train_data(
-                    batch_data
-                )  # (batch_size, 57), (batch_size,)
-                # print("obs.shape:",obs.shape)
-                # print("rewards:",rewards.shape)
-                # rewards_mean = self.model.update(obs, rewards, dones)
+    #         else:
+    #             obs, actions, rewards, dones, discounts = self.TD_dict_to_TD_train_data(
+    #                 batch_data
+    #             )  # (batch_size, 57), (batch_size,)
+    #             # print("obs.shape:",obs.shape)
+    #             # print("rewards:",rewards.shape)
+    #             # rewards_mean = self.model.update(obs, rewards, dones)
 
-                rewards_mean = self.model.update_dreaming(obs, actions, rewards, dones)
+    #             rewards_mean = self.model.update_dreaming(obs, actions, rewards, dones)
 
-        # self.post_process_play_records()
-        return rewards_mean
+    #     # self.post_process_play_records()
+    #     return rewards_mean
 
     def dreaming_update(self):
         """
@@ -392,8 +405,10 @@ class Play:
 
         4. in each batch process, after imagine step, do update actor and critic
         """
-        data = next(self._dataset)
-        data = utils.preprocess(data, self._c)
+        # data = next(self._dataset)  # already do preprocess in dataset making
+        data = (
+            self._dataset()
+        )  # already do preprocess in dataset making, using handmade dataset generator
 
         obs, actions, obp1s, rewards, dones, discounts = (
             data["obs"],
@@ -412,9 +427,11 @@ class Play:
         # print("discounts:", discounts.shape)
 
         start_time = time.time()
-        rewards_mean = self.model.update_dreaming(
-            obs, actions, obp1s, rewards, dones, discounts
-        )
+        rewards_mean = None
+        # rewards_mean = self.model.update_dreaming(
+        #     obs, actions, obp1s, rewards, dones, discounts
+        # )
+
         end_time = time.time()
         # print("update time = ", end_time - start_time)
 

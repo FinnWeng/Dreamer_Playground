@@ -370,7 +370,7 @@ class Dreamer:
         # define callback and set networ parameters
         gpus = tf.config.experimental.list_physical_devices("GPU")
 
-        tf.config.experimental.set_visible_devices(gpus[0], "GPU")
+        tf.config.experimental.set_visible_devices(gpus[1], "GPU")
         if gpus:
             # Currently, memory growth needs to be the same across GPUs
             for gpu in gpus:
@@ -406,9 +406,13 @@ class Dreamer:
         self.gamma = 0.99
         self.tau = 0.001
 
-        self.DDPG_enc_path = "./model/DDPG_enc.ckpt"
-        self.DDPG_actor_path = "./model/DDPG_actor.ckpt"
-        self.DDPG_critic_path = "./model/DDPG_critic.ckpt"
+        self.Dreamer_dynamics_path = "./model/Dreamer_dynamics.ckpt"
+        self.Dreamer_encoder_path = "./model/Dreamer_encoder.ckpt"
+        self.Dreamer_reward_decoder_path = "./model/Dreamer_reward_decoder.ckpt"
+        self.Dreamer_critic_path = "./model/Dreamer_critic.ckpt"
+        self.Dreamer_actor_path = "./model/Dreamer_actor.ckpt"
+        
+        
 
         self.dynamics = RSSM(self._c.stoch_size, self._c.deter_size, self._c.deter_size)
 
@@ -452,6 +456,7 @@ class Dreamer:
             "./tf_log", max_queue=1000, flush_millis=20000
         )
         self.total_step = 1
+        # self.total_step = int(15.66*1000)
         self.save_play_img = False
 
         self.RGB_array_list = []
@@ -662,8 +667,8 @@ class Dreamer:
 
         4. in each batch process, after imagine step, do update actor and critic
         """
-        obs = tf.cast(obs, tf.float32) # after preprocess
-        obp1s = tf.cast(obp1s, tf.float32) # after preprocess
+        obs = tf.cast(obs, tf.float32)  # after preprocess
+        obp1s = tf.cast(obp1s, tf.float32)  # after preprocess
         actions = tf.cast(acts, tf.float32)
         rewards = tf.cast(rewards, tf.float32)
         record_discounts = tf.cast(record_discounts, tf.float32)
@@ -768,34 +773,37 @@ class Dreamer:
         self.critic_optimizer.apply_gradients(zip(critic_grads, critic_var))
         self.actor_optimizer.apply_gradients(zip(actor_grads, actor_var))
         if self.total_step % 10000 == 0:
-            self.encoder.save_weights(self.DDPG_enc_path)
-            self.actor.save_weights(self.DDPG_actor_path)
-            self.critic.save_weights(self.DDPG_critic_path)
+            self.dynamics.save_weights(self.Dreamer_dynamics_path)
+            self.encoder.save_weights(self.Dreamer_encoder_path)
+            self.reward_decoder.save_weights(self.Dreamer_reward_decoder_path)
+            self.critic.save_weights(self.Dreamer_critic_path)
+            self.actor.save_weights(self.Dreamer_actor_path)
+
 
         self.total_step += 1
         tf.summary.experimental.set_step(self.total_step)
         print("update finish, save summary...")
-        with self._writer.as_default():
-            tf.summary.scalar("actor_loss/reverse_lambda_return", actor_loss, step=self.total_step)
-            tf.summary.scalar("critic1_loss", critic_loss, step=self.total_step)
-            tf.summary.scalar("world_loss", world_loss, step=self.total_step)
-            # tf.summary.scalar(
-            #     "average_reward", tf.reduce_mean(rewards), step=self.total_step
-            # )
+        if self.total_step % 20 == 0:
+            with self._writer.as_default():
+                tf.summary.scalar(
+                    "actor_loss/reverse_lambda_return", actor_loss, step=self.total_step
+                )
+                tf.summary.scalar("critic1_loss", critic_loss, step=self.total_step)
+                tf.summary.scalar("world_loss", world_loss, step=self.total_step)
+                # tf.summary.scalar(
+                #     "average_reward", tf.reduce_mean(rewards), step=self.total_step
+                # )
 
         if self.total_step % 500 == 0:
             print("do image summaries saving!!")
             self._image_summaries(
-                {"obs": obs, "actions": actions,"obp1s":obp1s},
-                embed,
-                image_pred,
+                {"obs": obs, "actions": actions, "obp1s": obp1s}, embed, image_pred,
             )
 
     def _image_summaries(self, data, embed, image_pred):
         # print("data['obs']:", data["obs"].shape) #  (50, 10, 64, 64, 1)
 
-
-        truth = data["obsp1s"][:6] + 0.5
+        truth = data["obp1s"][:6] + 0.5
         recon = image_pred.mode()[:6]
         init, _ = self.dynamics.observe(
             embed[:6, :5], data["actions"][:6, :5]

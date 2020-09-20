@@ -82,6 +82,7 @@ def define_config():
 
 
 if __name__ == "__main__":
+
     task = "atari_Breakout"
     suite, task = task.split("_", 1)
     sticky_actions = True
@@ -107,6 +108,5 @@ if __name__ == "__main__":
         print("play_process.play_records:", len(play_process.play_records))
         play_process.collect(using_random_policy=False, must_be_whole_episode=False)
         print("play_process.play_records:", len(play_process.play_records))
-        # mean_reward = play_process.update()
         mean_reward = play_process.dreaming_update()
         print("rewards:", mean_reward)
