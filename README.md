@@ -8,11 +8,11 @@ In this repo, I play my own implementation, official implementation and also som
 
 Here is result of my own implementation:
 
-![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/4to1.PNG "4to1")
+![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/4to1.png "4to1")
 
 These four charts show how three loss of Dreamer and reward of environment changed. From left to right, up to down, there are Action Function Loss, Value Function Loss, World-Model Loss and episode reward.
 
-![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/play_image_one_round.PNG "play_image_one_round")
+![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/play_image_one_round.png "play_image_one_round")
 
 After 100,000 times update, I confirm that a situation mentioned in paper happened: for discrete action space, Dreamer will get inferior result, lower than the result of model-free methods.
 
