@@ -6,7 +6,18 @@ In this repo, I play my own implementation, official implementation and also som
 
 # My Implementation
 
-Here is result of my own implementation:
+
+Here's the result of Dreamer for SpaceInvaders:
+
+This is just result after 6 hours training, which means it converges super fast for image input!
+![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/SpaceInvaders_play.gif "Dreamer_SpaceInvaders")
+
+And the episode reward of it shows obvious ascending.
+![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/SpaceInvaders_episode_rewards.PNG "4to1")
+
+
+
+Here is result of my own implementation for breakout:
 
 ![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/4to1.png "4to1")
 
