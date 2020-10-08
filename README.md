@@ -13,6 +13,7 @@ This is just result after 6 hours training, which means it converges super fast 
 ![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/SpaceInvaders_play.gif "Dreamer_SpaceInvaders")
 
 And the episode reward of it shows obvious ascending.
+
 ![alt text](https://github.com/FinnWeng/Dreamer_Playground/blob/master/common/SpaceInvaders_episode_rewards.PNG "4to1")
 
 
